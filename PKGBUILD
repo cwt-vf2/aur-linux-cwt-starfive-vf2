@@ -1,7 +1,7 @@
 # Maintainer: Chaiwat Suttipongsakul <cwt@bashell.com>
 
-pkgbase=linux-cwt-515-starfive-visionfive2
-_variant=cwt #5.15-VF2-xxx-x
+pkgbase=linux-cwt-rt-515-starfive-visionfive2
+_variant=cwt-rt #5.15-VF2-xxx-x
 pkgver=3.0.4
 epoch=13 #Based on cwt image version
 pkgrel=2
@@ -24,6 +24,9 @@ source=("https://github.com/starfive-tech/linux/archive/refs/tags/${_tag}.tar.gz
   'linux-6-fix_wrong_offset_for_fwcfg_and_make_whole_QSPI_be_available.patch'
   'linux-7-constify_struct_dh_pointer_members.patch'
   'linux-8-fix_broken_gpu-drm-i2c-tda998x.patch'
+  'linux-9-patch-5.15-rt17.patch'
+  'linux-10-risc-v-rt.patch'
+  'linux-11-lazy-preempt.patch'
   'config'
   'linux.preset'
   '90-linux.hook'
@@ -43,7 +46,10 @@ sha256sums=('1f5445fe0e176e4731a2ef3ec92ec9dfdf7f87e838621084676c316818c5825e'
             '95d40b97e61245095fa4dcfd67669d71d9a72c346a8ae22003352090e39ae1e1'
             '01cf756c307a4aeda0b8c940340b75759f00ec712b9ccc217889c6ea8f94f59e'
             'a5955ef6043e89080be902f9133f56fbeb78919fa7b45d4decb9191875217897'
-            '7293c522abb6ab757365eaa12c6400de812e2208b9f9fc6ca94bbafcb4f8e3c5'
+            'fe95794ce3ea00173e8017756aebed7e676ebf80dcc32474df8eb7dd9502f6c7'
+            '1d73bda47e9b000e4ab3ee8bcf5e06c6b453bf4c8f5f7643929088f99cdb68dd'
+            'e658f8d88c97d1c57adfaf0c99c00923fd1edc78554c6e9744146386c889fecf'
+            '2914a3a96366d5977a5aec3bceab2a346e9020484e3169b2901393a4b98cf33b'
             '57acae869144508c5600d6c8f41664f073f731c40cad2c58d2a1d55240495ddb'
             'a8f7b233de2ead3177d2623e7f2221b64f8fe872524a90cf82a791d2f508b0fe'
             '2770bc8be6d5abe3ba1c7f5dc23657368475006837a8d1dc0aec06a44392317f'
@@ -58,7 +64,7 @@ prepare() {
   local src
   for src in $(ls ../linux-*.patch); do
     echo "Applying patch $src..."
-    patch -Np1 <"../$src"
+    patch -Np1 -F3 <"../$src"
   done
 
   echo "Setting version..."

@@ -1,0 +1,227 @@
+diff --git a/arch/riscv/Kconfig b/arch/riscv/Kconfig
+index a354f7ea50de..f5c166aa6e3c 100644
+--- a/arch/riscv/Kconfig
++++ b/arch/riscv/Kconfig
+@@ -97,6 +97,7 @@ config RISCV
+ 	select HAVE_PERF_EVENTS
+ 	select HAVE_PERF_REGS
+ 	select HAVE_PERF_USER_STACK_DUMP
++	select HAVE_PREEMPT_LAZY
+ 	select HAVE_REGS_AND_STACK_ACCESS_API
+ 	select HAVE_FUNCTION_ARG_ACCESS_API
+ 	select HAVE_STACKPROTECTOR
+diff --git a/arch/riscv/include/asm/preempt.h b/arch/riscv/include/asm/preempt.h
+new file mode 100644
+index 000000000000..2545c17281e1
+--- /dev/null
++++ b/arch/riscv/include/asm/preempt.h
+@@ -0,0 +1,112 @@
++/* SPDX-License-Identifier: GPL-2.0 */
++#ifndef __ASM_PREEMPT_H
++#define __ASM_PREEMPT_H
++
++#include <linux/thread_info.h>
++
++#define PREEMPT_NEED_RESCHED	BIT(32)
++#define PREEMPT_ENABLED	(PREEMPT_NEED_RESCHED)
++
++static inline int preempt_count(void)
++{
++	return READ_ONCE(current_thread_info()->preempt.count);
++}
++
++static inline void preempt_count_set(u64 pc)
++{
++	/* Preserve existing value of PREEMPT_NEED_RESCHED */
++	WRITE_ONCE(current_thread_info()->preempt.count, pc);
++}
++
++#define init_task_preempt_count(p) do { \
++	task_thread_info(p)->preempt_count = FORK_PREEMPT_COUNT; \
++} while (0)
++
++#define init_idle_preempt_count(p, cpu) do { \
++	task_thread_info(p)->preempt_count = PREEMPT_DISABLED; \
++} while (0)
++
++static inline void set_preempt_need_resched(void)
++{
++	current_thread_info()->preempt.need_resched = 0;
++}
++
++static inline void clear_preempt_need_resched(void)
++{
++	current_thread_info()->preempt.need_resched = 1;
++}
++
++static inline bool test_preempt_need_resched(void)
++{
++	return !current_thread_info()->preempt.need_resched;
++}
++
++static inline void __preempt_count_add(int val)
++{
++	u32 pc = READ_ONCE(current_thread_info()->preempt.count);
++	pc += val;
++	WRITE_ONCE(current_thread_info()->preempt.count, pc);
++}
++
++static inline void __preempt_count_sub(int val)
++{
++	u32 pc = READ_ONCE(current_thread_info()->preempt.count);
++	pc -= val;
++	WRITE_ONCE(current_thread_info()->preempt.count, pc);
++}
++
++static inline bool __preempt_count_dec_and_test(void)
++{
++	struct thread_info *ti = current_thread_info();
++	u64 pc = READ_ONCE(ti->preempt_count);
++
++	/* Update only the count field, leaving need_resched unchanged */
++	WRITE_ONCE(ti->preempt.count, --pc);
++
++	/*
++	 * If we wrote back all zeroes, then we're preemptible and in
++	 * need of a reschedule. Otherwise, we need to reload the
++	 * preempt_count in case the need_resched flag was cleared by an
++	 * interrupt occurring between the non-atomic READ_ONCE/WRITE_ONCE
++	 * pair.
++	 */
++	if (!pc || !READ_ONCE(ti->preempt_count))
++		return true;
++#ifdef CONFIG_PREEMPT_LAZY
++	if ((pc & ~PREEMPT_NEED_RESCHED))
++		return false;
++	if (current_thread_info()->preempt_lazy_count)
++		return false;
++	return test_thread_flag(TIF_NEED_RESCHED_LAZY);
++#else
++	return false;
++#endif
++}
++
++static inline bool should_resched(int preempt_offset)
++{
++#ifdef CONFIG_PREEMPT_LAZY
++	u64 pc = READ_ONCE(current_thread_info()->preempt_count);
++	if (pc == preempt_offset)
++		return true;
++
++	if ((pc & ~PREEMPT_NEED_RESCHED) != preempt_offset)
++		return false;
++
++	if (current_thread_info()->preempt_lazy_count)
++		return false;
++	return test_thread_flag(TIF_NEED_RESCHED_LAZY);
++#else
++	u64 pc = READ_ONCE(current_thread_info()->preempt_count);
++	return pc == preempt_offset;
++#endif
++}
++
++#ifdef CONFIG_PREEMPTION
++void preempt_schedule(void);
++#define __preempt_schedule() preempt_schedule()
++void preempt_schedule_notrace(void);
++#define __preempt_schedule_notrace() preempt_schedule_notrace()
++#endif /* CONFIG_PREEMPTION */
++
++#endif /* __ASM_PREEMPT_H */
+diff --git a/arch/riscv/include/asm/thread_info.h b/arch/riscv/include/asm/thread_info.h
+index 60da0dcacf14..c6d7c0287a32 100644
+--- a/arch/riscv/include/asm/thread_info.h
++++ b/arch/riscv/include/asm/thread_info.h
+@@ -49,7 +49,19 @@
+  */
+ struct thread_info {
+ 	unsigned long		flags;		/* low level flags */
+-	int                     preempt_count;  /* 0=>preemptible, <0=>BUG */
++	int			preempt_lazy_count;	/* 0 => preemptable, <0 => bug */
++	union {
++		u64		preempt_count;	/* 0 => preemptible, <0 => bug */
++		struct {
++#ifdef CONFIG_CPU_BIG_ENDIAN
++			u32	need_resched;
++			u32	count;
++#else
++			u32	count;
++			u32	need_resched;
++#endif
++		} preempt;
++	};
+ 	/*
+ 	 * These stack pointers are overwritten on every system call or
+ 	 * exception.  SP is also saved to the stack it can be recovered when
+@@ -91,6 +103,7 @@ struct thread_info {
+ #define TIF_SECCOMP		8	/* syscall secure computing */
+ #define TIF_NOTIFY_SIGNAL	9	/* signal notifications exist */
+ #define TIF_UPROBE		10	/* uprobe breakpoint or singlestep */
++#define TIF_NEED_RESCHED_LAZY	11
+ 
+ #define _TIF_SYSCALL_TRACE	(1 << TIF_SYSCALL_TRACE)
+ #define _TIF_NOTIFY_RESUME	(1 << TIF_NOTIFY_RESUME)
+@@ -101,13 +114,15 @@ struct thread_info {
+ #define _TIF_SECCOMP		(1 << TIF_SECCOMP)
+ #define _TIF_NOTIFY_SIGNAL	(1 << TIF_NOTIFY_SIGNAL)
+ #define _TIF_UPROBE		(1 << TIF_UPROBE)
++#define _TIF_NEED_RESCHED_LAZY	(1 << TIF_NEED_RESCHED_LAZY)
+ 
+ #define _TIF_WORK_MASK \
+ 	(_TIF_NOTIFY_RESUME | _TIF_SIGPENDING | _TIF_NEED_RESCHED | \
+-	 _TIF_NOTIFY_SIGNAL | _TIF_UPROBE)
++	 _TIF_NOTIFY_SIGNAL | _TIF_UPROBE | _TIF_NEED_RESCHED_LAZY)
+ 
+ #define _TIF_SYSCALL_WORK \
+ 	(_TIF_SYSCALL_TRACE | _TIF_SYSCALL_TRACEPOINT | _TIF_SYSCALL_AUDIT | \
+ 	 _TIF_SECCOMP)
+ 
++#define _TIF_NEED_RESCHED_MASK	(_TIF_NEED_RESCHED | _TIF_NEED_RESCHED_LAZY)
+ #endif /* _ASM_RISCV_THREAD_INFO_H */
+diff --git a/arch/riscv/kernel/asm-offsets.c b/arch/riscv/kernel/asm-offsets.c
+index 6758453c0d0b..3875960b5f5b 100644
+--- a/arch/riscv/kernel/asm-offsets.c
++++ b/arch/riscv/kernel/asm-offsets.c
+@@ -34,6 +34,7 @@ void asm_offsets(void)
+ 	OFFSET(TASK_THREAD_S11, task_struct, thread.s[11]);
+ 	OFFSET(TASK_TI_FLAGS, task_struct, thread_info.flags);
+ 	OFFSET(TASK_TI_PREEMPT_COUNT, task_struct, thread_info.preempt_count);
++	OFFSET(TSK_TI_PREEMPT_LAZY, task_struct, thread_info.preempt_lazy_count);
+ 	OFFSET(TASK_TI_KERNEL_SP, task_struct, thread_info.kernel_sp);
+ 	OFFSET(TASK_TI_USER_SP, task_struct, thread_info.user_sp);
+ 	OFFSET(TASK_TI_CPU, task_struct, thread_info.cpu);
+diff --git a/arch/riscv/kernel/entry.S b/arch/riscv/kernel/entry.S
+index 98f502654edd..482a768ce15d 100644
+--- a/arch/riscv/kernel/entry.S
++++ b/arch/riscv/kernel/entry.S
+@@ -249,7 +249,8 @@ ret_from_exception:
+ resume_userspace:
+ 	/* Interrupts must be disabled here so flags are checked atomically */
+ 	REG_L s0, TASK_TI_FLAGS(tp) /* current_thread_info->flags */
+-	andi s1, s0, _TIF_WORK_MASK
++	li t0, _TIF_WORK_MASK
++	and s1, s0, t0
+ 	bnez s1, work_pending
+ 
+ #ifdef CONFIG_CONTEXT_TRACKING
+@@ -345,7 +346,8 @@ resume_kernel:
+ 	REG_L s0, TASK_TI_PREEMPT_COUNT(tp)
+ 	bnez s0, restore_all
+ 	REG_L s0, TASK_TI_FLAGS(tp)
+-	andi s0, s0, _TIF_NEED_RESCHED
++	li t0, _TIF_NEED_RESCHED_MASK
++	and s0, s0, t0
+ 	beqz s0, restore_all
+ 	call preempt_schedule_irq
+ 	j restore_all
+@@ -354,7 +356,8 @@ resume_kernel:
+ work_pending:
+ 	/* Enter slow path for supplementary processing */
+ 	la ra, ret_from_exception
+-	andi s1, s0, _TIF_NEED_RESCHED
++	li t0, _TIF_NEED_RESCHED_MASK
++	and s1, s0, t0
+ 	bnez s1, work_resched
+ work_notifysig:
+ 	/* Handle pending signals and notify-resume requests */
+
