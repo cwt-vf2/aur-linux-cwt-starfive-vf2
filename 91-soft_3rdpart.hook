@@ -3,9 +3,9 @@ Type = Package
 Operation = Install
 Operation = Upgrade
 Operation = Remove
-Target = linux-cwt-515-starfive-visionfive2-soft_3rdpart
+Target = linux-cwt-rt-515-starfive-visionfive2-soft_3rdpart
 
 [Action]
 Description = Updating linux initcpios...
 When = PostTransaction
-Exec = /bin/bash -c "/usr/bin/depmod -a 5.15.2-cwt-3.0.4-2 && /usr/bin/mkinitcpio -k 5.15.2-cwt-3.0.4-2 -g /boot/initramfs-linux.img"
+Exec = /bin/bash -c "/usr/bin/depmod -a 5.15.2-rt17-cwt-rt-3.0.4-2 && /usr/bin/mkinitcpio -k 5.15.2-rt17-cwt-rt-3.0.4-2 -g /boot/initramfs-linux.img"
