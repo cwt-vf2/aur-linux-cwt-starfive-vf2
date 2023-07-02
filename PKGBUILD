@@ -2,9 +2,9 @@
 
 pkgbase=linux-cwt-rt-515-starfive-visionfive2
 _variant=cwt-rt #5.15-VF2-xxx-x
-pkgver=3.0.4
-epoch=13 #Based on cwt image version
-pkgrel=2
+pkgver=3.1.5
+epoch=14 #Based on cwt image version
+pkgrel=1
 _tag=VF2_v${pkgver}
 _desc='Linux 5.15.x (-cwt) for StarFive RISC-V VisionFive 2 Board'
 _srcname=linux-$_tag
@@ -36,7 +36,7 @@ source=("https://github.com/starfive-tech/linux/archive/refs/tags/${_tag}.tar.gz
   'soft_3rdpart-mkinitcpio.conf'
   '91-soft_3rdpart.hook')
 
-sha256sums=('1f5445fe0e176e4731a2ef3ec92ec9dfdf7f87e838621084676c316818c5825e'
+sha256sums=('68cc09da7fb91010df7048b6b970ea1a3883cef1f5f2022786dbdb8c1a3b52d5'
             '3bd9dc1b0843b77b51b269ad2ca30895121d94a6993f149496a7c9a83e08b369'
             '1582369c7a9365d98a03e08d0dbe8e0affc9417672f00aa57d6957ba559da878'
             'e16e2f8eafe310a561a553d8e2af16af7a50d2c499221d0b9348a94aea571dfa'
@@ -51,8 +51,8 @@ sha256sums=('1f5445fe0e176e4731a2ef3ec92ec9dfdf7f87e838621084676c316818c5825e'
             'e658f8d88c97d1c57adfaf0c99c00923fd1edc78554c6e9744146386c889fecf'
             '8849c840774a4edbd8e433750d20b1a19831c60c948551542c74ae5d736da407'
             '57acae869144508c5600d6c8f41664f073f731c40cad2c58d2a1d55240495ddb'
-            '19987a8c7771a38674739566bb882d8d9ed7bddf1a987a909c96715152f5d568'
-            '2770bc8be6d5abe3ba1c7f5dc23657368475006837a8d1dc0aec06a44392317f'
+            'a8f7b233de2ead3177d2623e7f2221b64f8fe872524a90cf82a791d2f508b0fe'
+            'a6306ae39d08b6f6385586ee4099d7731c022dd37f938885ba8538f65f87c548'
             '2492020565e8e6157876c2bee48af32dd3fc7967bd418fe6d2d9d9ea0bb72bf1'
             '800e2ca5970c1869282f99f19994c7ad2cbb05a6f3e059d692e30746f2c9b577'
             '5f1c56261d308e968a8dd161e4d5db25b378b73313749e0ca23eb2ef32af9dad'
