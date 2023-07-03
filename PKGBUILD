@@ -51,13 +51,12 @@ sha256sums=('68cc09da7fb91010df7048b6b970ea1a3883cef1f5f2022786dbdb8c1a3b52d5'
             'e658f8d88c97d1c57adfaf0c99c00923fd1edc78554c6e9744146386c889fecf'
             '8849c840774a4edbd8e433750d20b1a19831c60c948551542c74ae5d736da407'
             '57acae869144508c5600d6c8f41664f073f731c40cad2c58d2a1d55240495ddb'
-            'a8f7b233de2ead3177d2623e7f2221b64f8fe872524a90cf82a791d2f508b0fe'
+            'bf5f693ffc81a04ba2d0c58976d24030e0ef1d930826d0a33e9c511d11d13340'
             'a6306ae39d08b6f6385586ee4099d7731c022dd37f938885ba8538f65f87c548'
             '2492020565e8e6157876c2bee48af32dd3fc7967bd418fe6d2d9d9ea0bb72bf1'
             '800e2ca5970c1869282f99f19994c7ad2cbb05a6f3e059d692e30746f2c9b577'
             '5f1c56261d308e968a8dd161e4d5db25b378b73313749e0ca23eb2ef32af9dad'
-            '15162c5405104f9d8b27cbb83ea218c52ed939e9a79b71b156e1f320e7c21ad7')
-
+            'd17a6c1235e275a8c985295b30748cddfc7c2bc299aa7400ce2a7534b84eb415')
 prepare() {
   cd $_srcname
 
@@ -139,6 +138,7 @@ _package() {
 
 _package-soft_3rdpart() {
   pkgdesc="The soft third part modules for the $_desc kernel"
+  depends=('visionfive2-img-gpu=1.19.6345021')
   license=('proprietary')
 
   echo "Installing Soft 3rd Part..."
@@ -266,3 +266,4 @@ for _p in "${pkgname[@]}"; do
 done
 
 # vim:set ts=8 sts=2 sw=2 et:
+
