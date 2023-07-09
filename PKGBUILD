@@ -139,6 +139,7 @@ _package() {
 _package-soft_3rdpart() {
   pkgdesc="The soft third part modules for the $_desc kernel"
   depends=('visionfive2-img-gpu=1.19.6345021')
+  conflicts=('linux-cwt-515-starfive-visionfive2-soft_3rdpart')
   license=('proprietary')
 
   echo "Installing Soft 3rd Part..."
